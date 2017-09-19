@@ -26,8 +26,9 @@ namespace Elastic.Installer.Domain.Model.Base
 
 		public ISession Session { get; }
 
-		public ReactiveList<IStep> AllSteps { get; protected set; } = new ReactiveList<IStep>();
-		public IReactiveDerivedList<IStep> Steps { get; protected set; } = new ReactiveList<IStep>().CreateDerivedCollection(x => x, x => true);
+		public ReactiveList<IStep> AllSteps { get; }
+		public IReactiveDerivedList<IStep> Steps { get; } 
+
 		public IStep ActiveStep => this.Steps[this.TabSelectedIndex];
 
 		public ReactiveCommand<object> Next { get; }
@@ -45,9 +46,13 @@ namespace Elastic.Installer.Domain.Model.Base
 			IWixStateProvider wixStateProvider,
 			ISession session,
 			string[] args
-			)
+		)
 		{
 			this.Session = session;
+
+			this.AllSteps = new ReactiveList<IStep> {ChangeTrackingEnabled = true};
+			this.Steps = this.AllSteps.CreateDerivedCollection(x => x, x => x.IsRelevant);
+			this.Steps.Changed.Subscribe(e => this.Steps.RaisePropertyChanged());
 
 			this._wixStateProvider = wixStateProvider ?? throw new ArgumentNullException(nameof(wixStateProvider));
 
@@ -57,17 +62,11 @@ namespace Elastic.Installer.Domain.Model.Base
 				(i, max) => i.GetValue() < max.GetValue());
 
 			this.Next = ReactiveCommand.Create(canMoveForwards);
-			this.Next.Subscribe(i =>
-			{
-				this.TabSelectedIndex = Math.Min(this.Steps.Count - 1, this.TabSelectedIndex + 1);
-			});
+			this.Next.Subscribe(i => { this.TabSelectedIndex = Math.Min(this.Steps.Count - 1, this.TabSelectedIndex + 1); });
 
 			var canMoveBackwards = this.WhenAny(vm => vm.TabSelectedIndex, i => i.GetValue() > 0);
 			this.Back = ReactiveCommand.Create(canMoveBackwards);
-			this.Back.Subscribe(i =>
-			{
-				this.TabSelectedIndex = Math.Max(0, this.TabSelectedIndex - 1);
-			});
+			this.Back.Subscribe(i => { this.TabSelectedIndex = Math.Max(0, this.TabSelectedIndex - 1); });
 
 			this.Help = ReactiveCommand.Create();
 			this.ShowLicenseBlurb = ReactiveCommand.Create();
@@ -76,14 +75,8 @@ namespace Elastic.Installer.Domain.Model.Base
 			this.RefreshCurrentStep.Subscribe(x => { this.Steps[this.TabSelectedIndex].Refresh(); });
 			this.Exit = ReactiveCommand.Create();
 
-			this.WhenAny(vm => vm.TabSelectedIndex, v => v.GetValue())
-				.Subscribe(i =>
-				{
-					var c = this.Steps.Count;
-					if (i == (c - 1)) this.NextButtonText = TextResources.SetupView_ExitText;
-					else if (i == (c - 2)) this.NextButtonText = TextResources.SetupView_InstallText;
-					else this.NextButtonText = TextResources.SetupView_NextText;
-				});
+			this.WhenAny(vm => vm.TabSelectedIndex, v => v.GetValue()).Subscribe(UpdateNextButtonText);
+			this.Steps.Changed.Subscribe((e => UpdateNextButtonText(this.TabSelectedIndex)));
 
 			this.WhenAnyValue(view => view.ValidationFailures)
 				.Subscribe(failures =>
@@ -94,7 +87,16 @@ namespace Elastic.Installer.Domain.Model.Base
 				});
 		}
 
+		private void UpdateNextButtonText(int i)
+		{
+			var c = this.Steps.Count;
+			if (i == (c - 1)) this.NextButtonText = TextResources.SetupView_ExitText;
+			else if (i == (c - 2)) this.NextButtonText = TextResources.SetupView_InstallText;
+			else this.NextButtonText = TextResources.SetupView_NextText;
+		}
+
 		string nextButtonText;
+
 		public string NextButtonText
 		{
 			get => nextButtonText;
@@ -102,6 +104,7 @@ namespace Elastic.Installer.Domain.Model.Base
 		}
 
 		string msiLogFileLocation;
+
 		public string MsiLogFileLocation
 		{
 			get => msiLogFileLocation;
@@ -109,6 +112,7 @@ namespace Elastic.Installer.Domain.Model.Base
 		}
 
 		int tabSelectionMax;
+
 		public int TabSelectionMax
 		{
 			get => tabSelectionMax;
@@ -116,6 +120,7 @@ namespace Elastic.Installer.Domain.Model.Base
 		}
 
 		int tabSelectedIndex;
+
 		public int TabSelectedIndex
 		{
 			get => tabSelectedIndex;
@@ -123,6 +128,7 @@ namespace Elastic.Installer.Domain.Model.Base
 		}
 
 		private IList<ValidationFailure> currentValidationFailures = new List<ValidationFailure>();
+
 		public IList<ValidationFailure> CurrentStepValidationFailures
 		{
 			get => currentValidationFailures;
@@ -130,6 +136,7 @@ namespace Elastic.Installer.Domain.Model.Base
 		}
 
 		bool sameVersionAlreadyInstalled;
+
 		public bool SameVersionAlreadyInstalled
 		{
 			get => sameVersionAlreadyInstalled;
@@ -137,6 +144,7 @@ namespace Elastic.Installer.Domain.Model.Base
 		}
 
 		bool higherVersionAlreadyInstalled;
+
 		public bool HigherVersionAlreadyInstalled
 		{
 			get => higherVersionAlreadyInstalled;

@@ -29,9 +29,23 @@ namespace Elastic.Installer.Domain.Model.Elasticsearch.Plugins
 					if (!any) this.HasInternetConnection = true;
 				});
 			
+			this.AvailablePlugins.ItemChanged
+				.Where(x => x.PropertyName == nameof(Plugin.Selected) && x.Sender.PluginType == PluginType.XPack)
+				.Select(x => x.Sender.Selected)
+				.Subscribe(selected =>
+				{
+					this.XPackEnabled = selected;
+				});
+			
 			Observable.Timer(TimeSpan.FromSeconds(0), TimeSpan.FromSeconds(2))
 				.ObserveOn(RxApp.MainThreadScheduler)
 				.Subscribe(async _ => await SetInternetConnection());
+		}
+
+		public override void Refresh()
+		{
+			base.Refresh();
+			this.HasInternetConnection = true;
 		}
 
 		private async Task SetInternetConnection()
@@ -40,6 +54,13 @@ namespace Elastic.Installer.Domain.Model.Elasticsearch.Plugins
 			
 			this.HasInternetConnection = await this.PluginStateProvider.HasInternetConnection();
 			this.Validate();
+		}
+		
+		bool xPackEnabled;
+		public bool XPackEnabled
+		{
+			get => this.xPackEnabled;
+			private set => this.RaiseAndSetIfChanged(ref this.xPackEnabled, value);
 		}
 		
 		bool hasInternetConnection;

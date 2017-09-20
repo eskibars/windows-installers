@@ -120,19 +120,24 @@ namespace Elastic.Installer.Domain.Model.Base
 		}
 
 		int tabSelectedIndex;
-
 		public int TabSelectedIndex
 		{
 			get => tabSelectedIndex;
 			set => this.RaiseAndSetIfChanged(ref tabSelectedIndex, value);
 		}
-
-		private IList<ValidationFailure> currentValidationFailures = new List<ValidationFailure>();
-
-		public IList<ValidationFailure> CurrentStepValidationFailures
+		
+		int? tabFirstInvalidIndex;
+		public int? TabFirstInvalidIndex
 		{
-			get => currentValidationFailures;
-			protected set => this.RaiseAndSetIfChanged(ref currentValidationFailures, value);
+			get => tabFirstInvalidIndex;
+			set => this.RaiseAndSetIfChanged(ref tabFirstInvalidIndex, value);
+		}
+
+		private IList<ValidationFailure> firstInvalidValidationFailures = new List<ValidationFailure>();
+		public IList<ValidationFailure> FirstInvalidStepValidationFailures
+		{
+			get => firstInvalidValidationFailures;
+			protected set => this.RaiseAndSetIfChanged(ref firstInvalidValidationFailures, value);
 		}
 
 		bool sameVersionAlreadyInstalled;

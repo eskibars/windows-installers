@@ -29,9 +29,7 @@ namespace Elastic.Installer.Domain.Tests.Elasticsearch.Models.Plugins
 			.OnStep(m => m.PluginsModel, step =>
 			{
 				step.XPackEnabled.Should().BeFalse();
-				var xpackPlugin = step.AvailablePlugins.First(p => p.PluginType == PluginType.XPack);
-				xpackPlugin.Selected = true;
-
+				step.ChangeXPackSelection(true);
 				step.XPackEnabled.Should().BeTrue();
 
 			})
